@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一年内三项最新技术发明 · 像素冒险</title>
+<style>
+/* ============ 基础 ============ */
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; background:#07070f; overflow:hidden;
+  font-family:'Zpix','Fusion Pixel 12px','DotGothic16','SimHei','Microsoft YaHei',sans-serif; }
+:root{
+  --bg:#0f0f23; --panel:#1a1a3a; --panel2:#12122b;
+  --white:#f2f2f2; --grey:#9aa0c3;
+  --cyan:#4deeea; --green:#6cf16c; --pink:#fb7299; --yellow:#ffd93b; --red:#ff5f5f; --violet:#b18cff; --orange:#ffa94d;
+}
+/* 16:9 舞台 */
+#stage-wrap{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+#stage{ position:relative; width:1280px; height:720px; background:var(--bg);
+  transform-origin:center center; box-shadow:0 0 0 6px #000, 0 0 60px rgba(77,238,234,.15); overflow:hidden; }
+/* CRT扫描线 */
+#stage::after{ content:''; position:absolute; inset:0; pointer-events:none; z-index:999;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 2px, transparent 2px 4px); }
+/* 像素字通用阴影 */
+.px { text-shadow:2px 2px 0 #000; }
+/* ============ 屏幕切换 ============ */
+.screen{ position:absolute; inset:0; display:none; }
+.screen.active{ display:block; }
+.screen.fadein{ animation:scrIn .45s steps(6); }
+@keyframes scrIn{ from{opacity:0; transform:scale(1.04);} to{opacity:1; transform:scale(1);} }
+
+/* ============ 开始画面 ============ */
+#scr-start{ display:none; }
+#scr-start.active{ display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.starfield{ position:absolute; inset:0; overflow:hidden; }
+.star{ position:absolute; width:3px; height:3px; background:#fff; animation:twinkle 2.4s infinite steps(4); }
+@keyframes twinkle{ 0%,100%{opacity:.15;} 50%{opacity:1;} }
+#start-title{ position:relative; text-align:center; z-index:2; }
+#start-title .top{ color:var(--cyan); font-size:22px; letter-spacing:8px; margin-bottom:18px; animation:blink 1.6s steps(2) infinite; }
+#start-title h1{ color:var(--white); font-size:64px; letter-spacing:6px; line-height:1.25;
+  text-shadow:4px 4px 0 #000, 8px 8px 0 rgba(251,114,153,.35); }
+#start-title h1 .hl{ color:var(--yellow); }
+#start-title .sub{ margin-top:22px; color:var(--grey); font-size:18px; letter-spacing:4px; }
+#start-title .vs{ margin-top:26px; display:flex; gap:18px; justify-content:center; font-size:17px; }
+#start-title .vs b{ padding:4px 14px; border:3px solid; }
+.press{ position:relative; z-index:2; margin-top:52px; color:var(--white); font-size:26px; letter-spacing:4px;
+  animation:blink 1.1s steps(2) infinite; cursor:pointer; }
+@keyframes blink{ 50%{opacity:0;} }
+#start-credit{ position:absolute; bottom:16px; width:100%; text-align:center; color:var(--grey); font-size:13px; letter-spacing:2px; z-index:2; }
+#start-credit .pink{ color:var(--pink); }
+
+/* ============ HUD ============ */
+#hud{ position:absolute; top:0; left:0; right:0; height:58px; background:var(--panel2);
+  border-bottom:4px solid #000; display:none; align-items:center; padding:0 18px; gap:14px; z-index:50; }
+#hud.on{ display:flex; }
+.hp-row{ display:flex; gap:5px; }
+.heart{ width:22px; height:20px; background:var(--red); clip-path:polygon(50% 100%,10% 60%,0 30%,15% 10%,35% 15%,50% 32%,65% 15%,85% 10%,100% 30%,90% 60%); }
+.heart.empty{ background:#3a3a55; }
+#exp-wrap{ flex:1; max-width:420px; }
+#exp-label{ color:var(--grey); font-size:12px; margin-bottom:3px; letter-spacing:2px; }
+#exp-bar{ height:16px; border:3px solid #000; background:#26264a; position:relative; }
+#exp-fill{ height:100%; width:0%; background:linear-gradient(90deg,#6cf16c,#4deeea); transition:width .6s steps(12); }
+#exp-fill::after{ content:''; position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0 2px, transparent 2px 8px); }
+#hud-level{ color:var(--yellow); font-size:18px; letter-spacing:2px; }
+#btn-danmaku{ margin-left:auto; font-size:13px; padding:6px 12px; background:#26264a; color:var(--grey);
+  border:3px solid #000; cursor:pointer; letter-spacing:1px; }
+#btn-danmaku.on{ color:var(--pink); background:#3a2030; }
+#btn-map{ font-size:13px; padding:6px 12px; background:#26264a; color:var(--cyan); border:3px solid #000; cursor:pointer; }
+
+/* ============ 弹幕 ============ */
+#danmaku{ position:absolute; top:70px; left:0; right:0; height:110px; z-index:60; pointer-events:none; overflow:hidden; display:none; }
+#danmaku.on{ display:block; }
+.dm{ position:absolute; left:100%; white-space:nowrap; font-size:17px; color:var(--white); opacity:.82;
+  text-shadow:2px 2px 0 #000; animation:dmMove linear forwards; }
+.dm.pink{ color:var(--pink); } .dm.cyan{ color:var(--cyan); } .dm.yellow{ color:var(--yellow); }
+@keyframes dmMove{ to{ transform:translateX(-1700px); } }
+
+/* ============ 地图画面 ============ */
+#scr-map{ padding-top:58px; }
+.map-title{ text-align:center; margin-top:34px; color:var(--white); font-size:30px; letter-spacing:6px; }
+.map-sub{ text-align:center; margin-top:10px; color:var(--grey); font-size:14px; letter-spacing:3px; }
+.map-path{ position:absolute; top:52%; left:0; right:0; height:6px; background:#26264a; border-top:3px solid #000; }
+.map-nodes{ position:absolute; top:0; left:0; right:0; bottom:90px; display:flex; align-items:center; justify-content:space-evenly; }
+.node{ width:270px; cursor:pointer; text-align:center; position:relative; animation:floaty 2.6s ease-in-out infinite; }
+.node:nth-child(2){ animation-delay:.4s; } .node:nth-child(3){ animation-delay:.8s; }
+@keyframes floaty{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+.node .frame{ border:5px solid #000; background:#000; position:relative; }
+.node canvas{ width:100%; height:170px; image-rendering:pixelated; display:block; }
+.node .lv{ position:absolute; top:-16px; left:-10px; z-index:3; background:var(--yellow); color:#000; font-weight:bold;
+  font-size:15px; padding:4px 10px; border:3px solid #000; transform:rotate(-6deg); }
+.node .nm{ margin-top:14px; font-size:21px; color:var(--white); letter-spacing:2px; }
+.node .ds{ margin-top:8px; font-size:13px; color:var(--grey); line-height:1.6; padding:0 10px; }
+.node .st{ margin-top:10px; font-size:13px; letter-spacing:2px; }
+.node.locked{ opacity:.45; filter:grayscale(.8); cursor:not-allowed; }
+.node.cleared .lv{ background:var(--green); }
+.node:not(.locked):hover .frame{ outline:4px solid var(--cyan); }
+.node .tag{ display:inline-block; margin-top:8px; font-size:12px; padding:3px 10px; border:2px solid; }
+.map-foot{ position:absolute; bottom:0; width:100%; height:70px; background:var(--panel2); border-top:4px solid #000;
+  display:flex; align-items:center; justify-content:center; gap:30px; color:var(--grey); font-size:14px; }
+.map-foot .k{ color:var(--cyan); }
+#map-end{ cursor:pointer; }
+#map-end.ready .st{ color:var(--green); }
+#map-end:not(.ready){ opacity:.45; }
+
+/* ============ 关卡画面 ============ */
+#scr-level{ padding-top:58px; }
+.lv-grid{ display:flex; gap:22px; padding:22px 26px 0; height:520px; }
+/* 左：像素大图 */
+.lv-img{ width:56%; position:relative; }
+.lv-img .frame{ height:100%; border:6px solid #000; background:#000; position:relative; overflow:hidden; }
+.lv-img canvas{ width:100%; height:100%; image-rendering:pixelated; display:block; }
+.lv-img .badge{ position:absolute; top:14px; left:-8px; z-index:3; padding:6px 16px; font-size:18px;
+  background:var(--yellow); color:#000; border:4px solid #000; transform:rotate(-4deg); }
+.lv-img .glow{ position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(180deg, rgba(15,15,34,0) 60%, rgba(7,7,15,.55)); }
+.lv-img .float{ position:absolute; inset:0; animation:imgFloat 3.4s ease-in-out infinite; }
+@keyframes imgFloat{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+/* 右：RPG面板 */
+.lv-panel{ flex:1; display:flex; flex-direction:column; gap:14px; }
+.panel-box{ background:var(--panel); border:4px solid #000; padding:14px 16px; position:relative; }
+.panel-box .pb-title{ position:absolute; top:-13px; left:12px; background:#000; color:var(--cyan);
+  font-size:13px; padding:2px 10px; letter-spacing:2px; }
+#lv-name{ font-size:27px; color:var(--white); letter-spacing:2px; }
+#lv-org{ margin-top:8px; font-size:12.5px; color:var(--grey); line-height:1.65; }
+#lv-tags{ margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
+#lv-tags span{ font-size:12px; padding:3px 10px; border:2px solid; }
+.stat-row{ margin:9px 0; }
+.stat-row .s-top{ display:flex; justify-content:space-between; font-size:14px; color:var(--white); }
+.stat-row .s-top .s-val{ color:var(--yellow); }
+.stat-row .s-bar{ margin-top:4px; height:10px; background:#26264a; border:2px solid #000; }
+.stat-row .s-fill{ height:100%; width:0; background:currentColor; transition:width .8s steps(10); }
+/* 对话框 */
+#dlg{ position:absolute; left:26px; right:26px; bottom:26px; height:150px; background:var(--panel);
+  border:5px solid #000; box-shadow:inset 0 0 0 3px #2c2c58; padding:20px 24px 16px; z-index:20; }
+/* 问答模式：对话框加高，关卡内容相应收紧 */
+#dlg.quiz{ height:252px; }
+#scr-level.quiz .lv-grid{ height:350px; }
+#dlg-name{ position:absolute; top:-16px; left:18px; background:var(--cyan); color:#000; font-weight:bold;
+  font-size:15px; padding:3px 14px; border:3px solid #000; }
+#dlg-text{ font-size:17px; color:var(--white); line-height:1.75; letter-spacing:.5px; min-height:88px; }
+#dlg-text .hl{ color:var(--yellow); } #dlg-text .cy{ color:var(--cyan); } #dlg-text .pk{ color:var(--pink); }
+#dlg-next{ position:absolute; right:16px; bottom:10px; color:var(--cyan); font-size:13px; animation:blink 1s steps(2) infinite; }
+/* 问答选项 */
+.quiz-opts{ margin-top:6px; }
+.qopt{ display:block; width:100%; text-align:left; margin-top:8px; padding:7px 12px; font-size:15.5px; color:var(--white);
+  background:#26264a; border:3px solid #000; cursor:pointer; letter-spacing:1px; }
+.qopt:hover{ background:#33335e; transform:translateX(6px); }
+.qopt.ok{ background:#1d4a2a; border-color:var(--green); color:var(--green); }
+.qopt.no{ background:#4a1d24; border-color:var(--red); color:var(--red); animation:shake .35s steps(4); }
+@keyframes shake{ 25%{transform:translateX(-8px);} 75%{transform:translateX(8px);} }
+.qhint{ margin-top:8px; font-size:13px; color:var(--green); }
+/* 关卡进度点 */
+#lv-dots{ position:absolute; top:74px; right:28px; display:flex; gap:8px; z-index:30; }
+#lv-dots i{ width:12px; height:12px; background:#33335e; border:2px solid #000; }
+#lv-dots i.done{ background:var(--green); } #lv-dots i.cur{ background:var(--yellow); }
+
+/* 特效层 */
+#fx{ position:absolute; inset:0; pointer-events:none; z-index:80; }
+.coin{ position:absolute; width:18px; height:18px; background:var(--yellow); border:3px solid #000;
+  animation:coinUp 1s steps(8) forwards; }
+@keyframes coinUp{ to{ transform:translateY(-130px) rotate(180deg); opacity:0; } }
+.flash-ok{ position:absolute; inset:0; background:rgba(108,241,108,.18); animation:flashF .5s steps(4) forwards; }
+.flash-no{ position:absolute; inset:0; background:rgba(255,95,95,.22); animation:flashF .5s steps(4) forwards; }
+@keyframes flashF{ to{opacity:0;} }
+.pop{ position:absolute; font-size:24px; color:var(--yellow); text-shadow:2px 2px 0 #000;
+  animation:popUp .9s steps(8) forwards; }
+@keyframes popUp{ 20%{transform:scale(1.3);} to{ transform:translateY(-60px); opacity:0; } }
+
+/* ============ 结局画面 ============ */
+#scr-end{ display:none; }
+#scr-end.active{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:80px; }
+#scr-end h2{ color:var(--yellow); font-size:44px; letter-spacing:8px; text-shadow:4px 4px 0 #000, 8px 8px 0 rgba(251,114,153,.3); }
+#end-sub{ margin-top:14px; color:var(--white); font-size:18px; letter-spacing:3px; }
+#end-stats{ margin-top:26px; display:flex; gap:20px; }
+.est{ background:var(--panel); border:4px solid #000; padding:14px 26px; text-align:center; }
+.est .v{ font-size:30px; color:var(--cyan); } .est .k{ margin-top:5px; font-size:13px; color:var(--grey); letter-spacing:2px; }
+#triple{ margin-top:30px; display:flex; gap:18px; }
+.tb{ width:92px; text-align:center; cursor:pointer; user-select:none; }
+.tb .ico{ width:64px; height:64px; margin:0 auto; border:4px solid #000; background:#26264a;
+  display:flex; align-items:center; justify-content:center; font-size:30px; }
+.tb .tx{ margin-top:7px; font-size:13px; color:var(--grey); letter-spacing:2px; }
+.tb.hit .ico{ background:var(--pink); animation:tPop .35s steps(4); }
+@keyframes tPop{ 40%{transform:scale(1.25) rotate(-6deg);} }
+.tb.hit .tx{ color:var(--pink); }
+#end-credit{ position:absolute; bottom:16px; width:100%; text-align:center; color:var(--grey); font-size:12.5px; line-height:1.8; letter-spacing:1px; }
+#end-credit .pink{ color:var(--pink); }
+#btn-restart{ margin-top:26px; font-size:15px; padding:10px 26px; background:#26264a; color:var(--white);
+  border:4px solid #000; cursor:pointer; letter-spacing:3px; }
+#btn-restart:hover{ background:#33335e; color:var(--cyan); }
+</style>
+</head>
+<body>
+<div id="stage-wrap"><div id="stage">
+
+  <!-- 星空 -->
+  <div class="starfield" id="stars"></div>
+
+  <!-- ====== 开始画面 ====== -->
+  <div class="screen active" id="scr-start">
+    <div id="start-title">
+      <div class="top px">2025 — 2026 · 年度科技观察</div>
+      <h1 class="px">一年，三项发明<br><span class="hl">改写人类边界</span></h1>
+      <div class="sub px">北脑一号 · Haven-1 · 钠新电池 —— 一场像素科普冒险</div>
+      <div class="vs px">
+        <b style="color:var(--cyan);border-color:var(--cyan)">意念成真</b>
+        <b style="color:var(--violet);border-color:var(--violet)">太空开门</b>
+        <b style="color:var(--orange);border-color:var(--orange)">不惧严寒</b>
+      </div>
+    </div>
+    <div class="press px" id="btn-start">▶ PRESS START（点击 / 回车）</div>
+    <div id="start-credit">风格致敬：B站 <span class="pink">@李白尼的猜想</span> —— 多点好奇，多点猜想，多点意思 ｜ 数据经全网交叉验证 · 2026.09</div>
+  </div>
+
+  <!-- ====== HUD ====== -->
+  <div id="hud">
+    <div class="hp-row" id="hp-row"></div>
+    <div id="exp-wrap">
+      <div id="exp-label">EXP 经验值</div>
+      <div id="exp-bar"><div id="exp-fill"></div></div>
+    </div>
+    <div id="hud-level" class="px">LV.1</div>
+    <button id="btn-map">🗺 地图</button>
+    <button id="btn-danmaku" class="on">弹幕 ON</button>
+  </div>
+
+  <!-- 弹幕层 -->
+  <div id="danmaku" class="on"></div>
+
+  <!-- ====== 地图 ====== -->
+  <div class="screen" id="scr-map">
+    <div class="map-title px">⬥ 选择关卡 ⬥</div>
+    <div class="map-sub px">三项发明 · 三个关卡 · 全部通关解锁结局</div>
+    <div class="map-path"></div>
+    <div class="map-nodes" id="map-nodes"></div>
+    <div class="map-foot px">
+      <span><span class="k">点击关卡</span> 进入</span>
+      <span><span class="k">空格 / 回车</span> 继续对话</span>
+      <span>答对 <span class="k">+EXP</span> ｜ 答错 <span class="k">-1 HP</span></span>
+    </div>
+  </div>
+
+  <!-- ====== 关卡 ====== -->
+  <div class="screen" id="scr-level">
+    <div id="lv-dots"></div>
+    <div class="lv-grid">
+      <div class="lv-img">
+        <div class="frame"><div class="float"><canvas id="lv-canvas"></canvas></div><div class="glow"></div></div>
+        <div class="badge px" id="lv-badge">LV.1</div>
+      </div>
+      <div class="lv-panel">
+        <div class="panel-box">
+          <div class="pb-title">◆ 角色档案</div>
+          <div id="lv-name" class="px">北脑一号</div>
+          <div id="lv-org"></div>
+          <div id="lv-tags"></div>
+        </div>
+        <div class="panel-box" style="flex:1">
+          <div class="pb-title">◆ 属性面板</div>
+          <div id="lv-stats"></div>
+        </div>
+      </div>
+    </div>
+    <div id="dlg">
+      <div id="dlg-name">旁白</div>
+      <div id="dlg-text"></div>
+      <div id="dlg-next">▼ 继续（点击 / 空格）</div>
+    </div>
+    <div id="fx"></div>
+  </div>
+
+  <!-- ====== 结局 ====== -->
+  <div class="screen" id="scr-end">
+    <h2 class="px">⬥ 通关成功 ⬥</h2>
+    <div id="end-sub" class="px">技术不再眺望未来 —— 它正在成为现在。</div>
+    <div id="end-stats">
+      <div class="est"><div class="v" id="es-exp">100</div><div class="k">总 EXP</div></div>
+      <div class="est"><div class="v" id="es-right">3/3</div><div class="k">答题正确</div></div>
+      <div class="est"><div class="v" id="es-hp">♥♥♥</div><div class="k">剩余 HP</div></div>
+    </div>
+    <div id="triple">
+      <div class="tb" data-t="赞"><div class="ico">👍</div><div class="tx">点赞</div></div>
+      <div class="tb" data-t="币"><div class="ico">🪙</div><div class="tx">投币</div></div>
+      <div class="tb" data-t="藏"><div class="ico">⭐</div><div class="tx">收藏</div></div>
+    </div>
+    <button id="btn-restart">↻ 再玩一次</button>
+    <div id="end-credit">
+      数据来源：MIT Technology Review《2026十大突破技术》 · 央视《新闻1+1》 · 新华社 · 中国经济网 · Vast Space 官方<br>
+      配图为 AI 生成概念图（像素化处理），非实物照片 ｜ Haven-1 发射日期以官方发布为准 ｜ 风格致敬 B站 <span class="pink">@李白尼的猜想</span>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+/* ============== 缩放适配 ============== */
+function fit(){
+  const s = Math.min(innerWidth/1280, innerHeight/720);
+  document.getElementById('stage').style.transform = `scale(${s})`;
+}
+addEventListener('resize', fit); fit();
+
+/* ============== 星空 ============== */
+const starsBox = document.getElementById('stars');
+for(let i=0;i<70;i++){
+  const d = document.createElement('div'); d.className='star';
+  d.style.left = Math.random()*100+'%'; d.style.top = Math.random()*100+'%';
+  d.style.animationDelay = (Math.random()*2.4)+'s';
+  starsBox.appendChild(d);
+}
+
+/* ============== 数据 ============== */
+const LEVELS = [
+  {
+    id:'bci', num:'LV.1', color:'var(--cyan)', img:'assets/bci_brain.png',
+    name:'北脑一号', org:'北京脑科学与类脑研究所 × 芯智达<br>2025年度中国十大科技进展 · 世界十大科技进展',
+    tags:[['全球首个','#4deeea'],['128通道','#4deeea'],['半侵入式','#4deeea']],
+    stats:[
+      ['信号通道','128 通道',100,'128 通道为芯片实际规格'],
+      ['人体植入','20+ 例',70,'截至 2026 年中'],
+      ['安全运行','7万 小时',85,'累计人体在线时长'],
+      ['意念词汇','≈100 个',60,'渐冻症患者"说"出中文词'],
+    ],
+    steps:[
+      '欢迎来到第一关。<span class="cy">北脑一号</span>，全球首个<span class="hl">百通道无线全植入</span>的半侵入式脑机系统——它让瘫痪者动、失语者言。',
+      '它的"半侵入式"是个狠活：电极<span class="hl">贴附在硬脑膜外</span>，完全不触碰脑组织。芯片？只有一枚<span class="hl">硬币大小</span>。',
+      '实战战绩：截瘫患者 3 个月实现神经功能跨级修复；2026 年启动注册临床试验，<span class="hl">2027 年申报医疗器械注册证</span>。准备好接受本关考验了吗？',
+    ],
+    quiz:{
+      q:'【本关考验】"北脑一号"的"半侵入式"电极，放在哪里？',
+      opts:['直接插入大脑皮层内部','贴附在硬脑膜外，不触碰脑组织','粘在头皮表面，像做脑电图'],
+      correct:1,
+      explain:'✓ 硬脑膜外！硬币大小的芯片贴附采集信号，创伤远小于全植入。',
+      extra:'💬 追问：如果你来设计，你希望用意念先控制什么？'
+    }
+  },
+  {
+    id:'haven', num:'LV.2', color:'var(--violet)', img:'assets/haven_station.png',
+    name:'Haven-1', org:'Vast Space（美国）× SpaceX 猎鹰9号<br>MIT《科技评论》2026十大突破技术',
+    tags:[['全球首座','#b18cff'],['商业空间站','#b18cff'],['3年建成','#b18cff']],
+    stats:[
+      ['居住空间','45 m³',55,'总加压体积 80m³'],
+      ['单批乘员','4 人',40,'驻留最长 30 天'],
+      ['轨道高度','425 km',75,'13.2kW 太阳能电力'],
+      ['网络速率','千兆',100,'Starlink 太空互联网 · 全球首次'],
+    ],
+    steps:[
+      '第二关，目的地：<span style="color:var(--violet)">Haven-1</span>，<span class="hl">全球首座商业空间站</span>。2026年5月搭乘猎鹰9号发射入轨，从立项到升空只用了 <span class="hl">3 年</span>。',
+      '这个单体舱段直径 4.4 米、高 10.1 米、约 14 吨——<span class="hl">猎鹰9号史上最重载荷</span>。顶部还有一扇 1.1 米的穹顶观景窗，躺着看地球。',
+      '它的野心很直白：接棒 <span class="hl">2031 年退役的国际空间站（ISS）</span>，把在轨科研与制造明码标价卖给全世界。（注：发射具体日期各信源略有出入，以官方为准）',
+    ],
+    quiz:{
+      q:'【本关考验】在 Haven-1 上，单批乘员一次最多能驻留多久？',
+      opts:['3 天，体验卡而已','30 天，太空常驻','半年，直接定居'],
+      correct:1,
+      explain:'✓ 30天！4名乘员，45m³居住空间，还带千兆WiFi。',
+      extra:'💬 追问：一张去 Haven-1 住 30 天的船票，你的心理价位是多少？'
+    }
+  },
+  {
+    id:'na', num:'LV.3', color:'var(--orange)', img:'assets/na_battery_car.png',
+    name:'钠新电池', org:'宁德时代 × 长安汽车 · 2026年2月发布<br>MIT《科技评论》2026十大突破技术',
+    tags:[['全球首款','#ffa94d'],['量产装车','#ffa94d'],['-50℃可用','#ffa94d']],
+    stats:[
+      ['能量密度','175 Wh/kg',88,'行业量产最高水平'],
+      ['极寒抗性','-40℃ >90%',95,'-50℃ 仍可稳定放电'],
+      ['低温功率','≈3 倍',75,'-30℃放电功率 vs 同级铁锂'],
+      ['资源储量','421 倍',100,'钠地壳含量是锂的421倍'],
+    ],
+    steps:[
+      '最终关：<span style="color:var(--orange)">钠新电池</span>，<span class="hl">全球首款乘用车量产钠离子电池</span>。宁德时代 × 长安，2026年2月发布、年中上市——冬天续航腰斩的时代要结束了。',
+      '面板说话：电芯 <span class="hl">175Wh/kg</span> 行业量产最高；<span class="hl">-40℃ 容量保持率超 90%</span>，-50℃ 仍能放电；针刺、挤压、锯断——<span class="hl">不起火不爆炸</span>。',
+      '更大的牌在资源端：钠的地壳储量是锂的 <span class="hl">421 倍</span>，中国不用再看稀缺资源的脸色。2025 年全球钠电出货 9GWh，同比 +150%。最后一战，接招。',
+    ],
+    quiz:{
+      q:'【本关考验】"钠新"电池在 -40℃ 极寒下，容量保持率是多少？',
+      opts:['约 50%，冷天续航腰斩','约 70%，和铁锂差不多','超过 90%，-50℃ 仍可放电'],
+      correct:2,
+      explain:'✓ 超90%！这才是新能源车该有的抗寒属性。',
+      extra:'💬 追问：你会为"冬天不缩水"的电池多付多少钱？'
+    }
+  }
+];
+
+/* ============== 游戏状态 ============== */
+const G = { hp:3, hpMax:3, exp:0, cleared:{}, right:0, quizDone:{}, lvIdx:0, step:0 };
+const EXP_MAX = 99;   // 3 关 × 33 EXP，答对三题即满
+
+/* ============== 工具 ============== */
+const $ = id => document.getElementById(id);
+function show(scr){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active','fadein'));
+  const el = $(scr); el.classList.add('active','fadein');
+  $('hud').classList.toggle('on', scr!=='scr-start');
+  $('danmaku').style.display = (scr!=='scr-start' && danmakuOn) ? 'block' : 'none';
+}
+function updateHUD(){
+  const row = $('hp-row'); row.innerHTML='';
+  for(let i=0;i<G.hpMax;i++){ const h=document.createElement('div'); h.className='heart'+(i<G.hp?'':' empty'); row.appendChild(h); }
+  $('exp-fill').style.width = Math.round(Math.min(1, G.exp/EXP_MAX)*100)+'%';
+  $('exp-label').textContent = `EXP 经验值 ${G.exp} / ${EXP_MAX}`;
+  $('hud-level').textContent = 'LV.' + Math.min(3, Math.floor(G.exp/33)+1);
+}
+function addExp(n, x, y){
+  G.exp += n; updateHUD();
+  const c = document.createElement('div'); c.className='coin';
+  c.style.left=(x||640)+'px'; c.style.top=(y||360)+'px';
+  $('fx').appendChild(c); setTimeout(()=>c.remove(),1000);
+  const p = document.createElement('div'); p.className='pop'; p.textContent='+'+n+' EXP';
+  p.style.left=((x||640)-30)+'px'; p.style.top=((y||360)-30)+'px';
+  $('fx').appendChild(p); setTimeout(()=>p.remove(),1000);
+}
+function flash(ok){
+  const f = document.createElement('div'); f.className = ok?'flash-ok':'flash-no';
+  $('fx').appendChild(f); setTimeout(()=>f.remove(),600);
+}
+/* 像素化 */
+function pixelate(canvas, src, cols){
+  const img = new Image();
+  img.onload = ()=>{ const rows = Math.round(cols*img.height/img.width);
+    canvas.width=cols; canvas.height=rows;
+    canvas.getContext('2d').drawImage(img,0,0,cols,rows); };
+  img.src = src;
+}
+/* 打字机 */
+let typeTimer=null, typing=false, fullHTML='', typeCb=null;
+function typeText(html, cb){
+  clearInterval(typeTimer); typing=true; typeCb=cb||null;
+  const el = $('dlg-text'); el.innerHTML=''; fullHTML=html;
+  const parts = html.split(/(<[^>]+>)/g).filter(Boolean);
+  let pi=0, ci=0;
+  const finish = ()=>{ typing=false; clearInterval(typeTimer); if(typeCb){ const f=typeCb; typeCb=null; f(); } };
+  typeTimer = setInterval(()=>{
+    if(pi>=parts.length){ finish(); return; }
+    const part = parts[pi];
+    if(part.startsWith('<')){ el.innerHTML += part; pi++; }
+    else{
+      if(ci<part.length){ el.innerHTML += part[ci]; ci++; }
+      else{ pi++; ci=0; }
+    }
+  }, 26);
+}
+function skipType(){
+  if(typing){ clearInterval(typeTimer); typing=false; $('dlg-text').innerHTML=fullHTML;
+    if(typeCb){ const f=typeCb; typeCb=null; f(); } return true; }
+  return false;
+}
+
+/* ============== 地图 ============== */
+function buildMap(){
+  const box = $('map-nodes'); box.innerHTML='';
+  LEVELS.forEach((L,i)=>{
+    const done = G.cleared[L.id];
+    const n = document.createElement('div');
+    n.className = 'node'+(done?' cleared':'');
+    n.innerHTML = `<div class="frame"><div class="lv px">${done?'已通关':L.num}</div><canvas></canvas></div>
+      <div class="nm px">${L.name}</div>
+      <div class="ds">${['全球首个百通道无线全植入脑机接口','全球首座商业空间站','全球首款乘用车量产钠电池'][i]}</div>
+      <div class="st px" style="color:${done?'var(--green)':'var(--yellow)'}">${done?'★ CLEARED':'▶ START'}</div>
+      <div class="tag" style="color:${L.color};border-color:${L.color}">${['医疗·脑机接口','航天·商业太空','能源·新材料'][i]}</div>`;
+    pixelate(n.querySelector('canvas'), L.img, 96);
+    n.onclick = ()=> enterLevel(i);
+    box.appendChild(n);
+  });
+  // 结局节点
+  const allClear = LEVELS.every(L=>G.cleared[L.id]);
+  const e = document.createElement('div');
+  e.className = 'node'+(allClear?'':' locked'); e.id='map-end';
+  e.innerHTML = `<div class="frame" style="background:#000;display:flex;align-items:center;justify-content:center;height:170px;">
+      <span style="font-size:56px;">${allClear?'🏆':'🔒'}</span></div>
+    <div class="nm px">真结局</div>
+    <div class="ds">${allClear?'三关已清 · 点击进入终章':'通关三关后解锁'}</div>
+    <div class="st px" style="color:${allClear?'var(--green)':'var(--grey)'}">${allClear?'▶ ENTER':'LOCKED'}</div>`;
+  if(allClear) e.onclick = showEnd;
+  box.appendChild(e);
+}
+
+/* ============== 关卡流程 ============== */
+let curLevel=null;
+function enterLevel(i){
+  G.lvIdx=i; G.step=0; curLevel=LEVELS[i];
+  const L=curLevel;
+  $('dlg').classList.remove('quiz'); $('scr-level').classList.remove('quiz');
+  show('scr-level');
+  $('lv-badge').textContent = L.num; $('lv-badge').style.background = (L.id==='bci')?'var(--cyan)':(L.id==='haven')?'var(--violet)':'var(--orange)';
+  $('lv-badge').style.color = '#000';
+  $('lv-name').innerHTML = L.name; $('lv-org').innerHTML = L.org;
+  $('lv-tags').innerHTML = L.tags.map(t=>`<span style="color:${t[1]};border-color:${t[1]}">${t[0]}</span>`).join('');
+  $('lv-stats').innerHTML = L.stats.map(s=>
+    `<div class="stat-row" style="color:${L.color}">
+      <div class="s-top"><span>${s[0]}</span><span class="s-val px">${s[1]}</span></div>
+      <div class="s-bar"><div class="s-fill" data-w="${s[2]}"></div></div>
+      <div style="font-size:11.5px;color:var(--grey);margin-top:3px;">${s[3]}</div></div>`).join('');
+  pixelate($('lv-canvas'), L.img, 150);
+  // 进度点
+  $('lv-dots').innerHTML = '';
+  const total = L.steps.length + 1;
+  for(let k=0;k<total;k++){ const d=document.createElement('i'); $('lv-dots').appendChild(d); }
+  updateDots();
+  setTimeout(()=>{ document.querySelectorAll('.s-fill').forEach(f=>f.style.width=f.dataset.w+'%'); }, 250);
+  typeText(L.steps[0]);
+  $('dlg-name').textContent='旁白';
+}
+function updateDots(){
+  const dots = $('lv-dots').children;
+  for(let k=0;k<dots.length;k++){
+    dots[k].className = k<G.step?'done':(k===G.step?'cur':'');
+  }
+}
+function levelNext(){
+  if(!curLevel) return;
+  if(skipType()) return;
+  const L=curLevel;
+  if(G.step < L.steps.length-1){
+    G.step++; updateDots();
+    typeText(L.steps[G.step]);
+  }else if(G.step === L.steps.length-1){
+    G.step++; updateDots(); showQuiz();
+  }
+}
+let quizActive=false;
+function showQuiz(){
+  const q = curLevel.quiz;
+  $('dlg-name').textContent='本关BOSS';
+  $('dlg').classList.add('quiz'); $('scr-level').classList.add('quiz');
+  quizActive=false;
+  // 题干用打字机，选项打字完成后一次性弹出（避免节点被重绘）
+  typeText(q.q, ()=>{
+    const el=$('dlg-text');
+    el.insertAdjacentHTML('beforeend',
+      `<div class="quiz-opts">` +
+      q.opts.map((o,i)=>`<button class="qopt" data-i="${i}">${'ABC'[i]}. ${o}</button>`).join('') +
+      `</div><div class="qhint" id="qhint"></div>`);
+    quizActive=true;
+  });
+}
+function answer(i, btn){
+  const q = curLevel.quiz;
+  if(btn.classList.contains('ok')) return;
+  if(i===q.correct){
+    btn.classList.add('ok'); quizActive=false;
+    $('qhint').innerHTML = q.explain + '<br>' + q.extra;
+    flash(true);
+    const r = btn.getBoundingClientRect(), st = $('stage').getBoundingClientRect();
+    const sc = 1280/st.width;
+    addExp(33, (r.left-st.left)*sc+r.width*sc/2, (r.top-st.top)*sc);
+    if(!G.quizDone[curLevel.id]){ G.quizDone[curLevel.id]=true; G.right++; }
+    G.cleared[curLevel.id]=true;
+    setTimeout(()=>{ $('dlg-next').textContent='▼ 返回地图（点击 / 空格）'; levelAdvance=1; },400);
+  }else{
+    btn.classList.add('no'); flash(false);
+    G.hp = Math.max(0,G.hp-1); updateHUD();
+    $('qhint').textContent = '✗ HP -1！再想想，答错是要掉血的。';
+    if(G.hp===0){ setTimeout(()=>{ G.hp=G.hpMax; updateHUD();
+      $('qhint').textContent='HP 耗尽……医疗包已补给（HP回满），继续挑战！'; },700); }
+    setTimeout(()=>btn.classList.remove('no'),600);
+  }
+}
+let levelAdvance=0;
+function levelClick(){
+  if(levelAdvance===1){ levelAdvance=0; $('dlg-next').textContent='▼ 继续（点击 / 空格）'; buildMap(); show('scr-map'); }
+  else levelNext();
+}
+
+/* ============== 结局 ============== */
+function showEnd(){
+  show('scr-end');
+  $('es-exp').textContent = G.exp;
+  $('es-right').textContent = G.right + '/3';
+  $('es-hp').textContent = '♥'.repeat(G.hp) || '—';
+  document.querySelectorAll('.tb').forEach(t=>{
+    t.classList.remove('hit'); t.onclick=()=>{ t.classList.add('hit'); tripleCount++; popTriple(t); };
+  });
+}
+let tripleCount=0;
+function popTriple(t){
+  const r=t.getBoundingClientRect(), st=$('stage').getBoundingClientRect(), sc=1280/st.width;
+  const p=document.createElement('div'); p.className='pop';
+  p.textContent = ['已点赞!','已投币!','已收藏!'][ ['赞','币','藏'].indexOf(t.dataset.t) ];
+  p.style.left=((r.left-st.left)*sc+10)+'px'; p.style.top=((r.top-st.top)*sc)+'px';
+  $('fx').appendChild(p); setTimeout(()=>p.remove(),1000);
+  if(tripleCount===3){ const p2=document.createElement('div'); p2.className='pop';
+    p2.textContent='⭐ 三连完成！UP主感谢收看 ⭐'; p2.style.left='500px'; p2.style.top='300px'; p2.style.fontSize='30px';
+    $('fx').appendChild(p2); setTimeout(()=>p2.remove(),1500); }
+}
+
+/* ============== 弹幕 ============== */
+const DM_POOL = [
+  '前方高能预警','666666','这数据也太狠了吧','北脑一号yyds','投币了投币了','一期更比一期强',
+  '意念打字不是梦','太空民宿什么时候开业','东北车主狂喜','电池：我不怕冷了','这期必须三连',
+  '前排围观','科学这么好玩吗','播放量破千万预定','弹幕护体','考古式追更','已经在期待下一期了'
+];
+let danmakuOn=true;
+function spawnDM(){
+  if(!danmakuOn) return;
+  const box=$('danmaku'); if(box.style.display==='none') return;
+  const d=document.createElement('div');
+  d.textContent = DM_POOL[Math.floor(Math.random()*DM_POOL.length)];
+  d.className='dm '+['','pink','cyan','yellow'][Math.floor(Math.random()*4)];
+  d.style.top = (Math.random()*80)+'px';
+  const dur = 7+Math.random()*5;
+  d.style.animationDuration = dur+'s';
+  box.appendChild(d);
+  setTimeout(()=>d.remove(), dur*1000+100);
+}
+setInterval(()=>{ if(Math.random()<.55) spawnDM(); }, 1300);
+
+$('btn-danmaku').onclick = (e)=>{ e.stopPropagation();
+  danmakuOn=!danmakuOn;
+  $('btn-danmaku').textContent = danmakuOn?'弹幕 ON':'弹幕 OFF';
+  $('btn-danmaku').classList.toggle('on', danmakuOn);
+  $('danmaku').classList.toggle('on', danmakuOn);
+  $('danmaku').style.display = danmakuOn?'block':'none';
+};
+$('btn-map').onclick = (e)=>{ e.stopPropagation(); buildMap(); show('scr-map'); };
+
+/* ============== 启动 ============== */
+$('btn-start').onclick = startGame;
+$('scr-start').onclick = startGame;
+function startGame(){
+  G.hp=3; G.exp=0; G.right=0; G.cleared={}; G.quizDone={};
+  updateHUD(); buildMap(); show('scr-map');
+}
+/* 点击处理：对话框区域用事件委托（选项按钮可稳定点击） */
+$('dlg').addEventListener('click', e=>{
+  e.stopPropagation();
+  const b = e.target.closest('.qopt');
+  if(b){ if(quizActive) answer(parseInt(b.dataset.i), b); return; }
+  levelClick();
+});
+$('scr-level').addEventListener('click', e=>levelClick());
+$('btn-restart').onclick = startGame;
+
+addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='Enter'||e.code==='KeyN'){
+    e.preventDefault();
+    if($('scr-start').classList.contains('active')){ startGame(); return; }
+    if($('scr-level').classList.contains('active')){ levelClick(); }
+  }
+  if(e.code==='KeyM'){ const c=Object.keys(G.cleared).length; if(c<3){ buildMap(); show('scr-map'); } }
+});
+updateHUD();
+</script>
+</body>
+</html>
